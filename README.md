@@ -67,13 +67,13 @@ will store the return address on the stack; when the new function is done, the
 computer will continue the previous function from that address.
 
 ```
- ----[main..]   [..main..]                   [..main]---> end
-          |     ^        |                   ^
-          v     |        v                   |
-          [func1]        [func2..]   [..func2]
-                               |     ^ 
-                               v     | 
-                               [func3] 
+ ----[main..] - - [..main..] - - - - - - - - - - [..main]---> end
+            |     ^        |                     ^
+            v     |        v                     |
+            [func1] - - -  [func2..] - - [..func2]
+                                   |     ^ 
+                                   v     | 
+                                   [func3] 
 ```
 
 [TODO little drawing of program flow in a tree]
