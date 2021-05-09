@@ -1,9 +1,9 @@
 
 # CPS - also known as Continuation-Passing Style - for Nim.
 
-People watching the Nim community have likely heard the term "CPS" over the
-last few months. It seems there is some confusion about CPS. Specifically, what
-CPS _is_, what it _is not_, what it can _do_ and what it can _not do_.
+People watching the Nim community have likely heard the term "CPS" over the last
+few months. It seems there is some confusion about CPS. Specifically, what CPS
+_is_, what it _is not_, what it can _do_ and what it can _not do_.
 
 This short writeup attempts to answer the above questions and describes a few
 technicalities involved with CPS, and how this could fit in the Nim ecosystem.
@@ -19,25 +19,27 @@ that is currently under development.
 *Nim-CPS* is a small metaprogramming library that offers a only a simple
 transformation for Nim functions. This transformation:
 
-- Cuts a function into smaller functions. Cuts are made at points where control-flow changes, e.g. `if`, `return`, calls, etc.
+- Cuts a function into smaller functions. Cuts are made at points where
+  control-flow changes, e.g. `if`, `return`, calls, etc.
 - Moves local variables of the function from the stack to the heap.
 
-The end result of this transformation is a continuation type, which is
-typically a Nim object which contains a function pointer and any variables
-that where originally on the stack in the original function. In addition, a
-series of functions are generated which take this **continuation** as input and
-perform any continuation-free logic from the body of the original function.
+The end result of this transformation is a continuation type, which is typically
+a Nim object that contains a function pointer and any variables that were on the
+stack in the original function. In addition to the continuation type, a series
+of functions are generated for each bit of logic between the cut points in the
+original, these functions use the **continuation** type in lieu of the original
+stack variables and where to pass control (function pointer).
 
-After this transformation, the stack is no longer needed, which allows for some
+After this transformation the stack is no longer needed, which allows for some
 interesting possibilities:
 
 - Pre-transformed functions _may_ be interrupted part-way at each cut point.
-- The transformed parts of a function _may_ be called in a different order,
-  or not called at all.
+- The transformed parts of a function _may_ be called in a different order, or
+  not called at all.
 - Some or all of the transformed parts _may_ be run in different threads.
 
 Note that _may_ was often used, this is where other libraries come in to use
-Nthe im-CPS transform in order to implement:
+the Nim-CPS transform in order to implement:
 
 - Interrupting and resuming function execution part-way, while running another
   function's parts is the basis of `yield` (coroutines! iterators! generators!),
@@ -56,9 +58,9 @@ Nthe im-CPS transform in order to implement:
 *Nim-CPS is not*:
 
 - an alternative implementation of `async`. As a matter of fact, Nim-CPS does
-not know anything about sockets, I/O, system calls, etc. That said, it is
-perfectly possible to implement something like `async` using CPS as a building
-block
+  not know anything about sockets, I/O, system calls, etc. That said, it is
+  perfectly possible to implement something like `async` using CPS as a building
+  block
 
 - [TODO What more is Nim-CPS not]
 
