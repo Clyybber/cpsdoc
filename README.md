@@ -1,46 +1,52 @@
 
 # CPS - also known as Continuation-Passing Style - for Nim.
 
-People watching the Nim community likely have heard the term "CPS" over the
-last few months. It seems that there is confusion about what CPS _is_, what it
-_is not_, what it can _do_ and what it can _not_ do.
+People watching the Nim community have likely heard the term "CPS" over the
+last few months. It seems there is some confusion about CPS. Specifically, what
+CPS _is_, what it _is not_, what it can _do_ and what it can _not do_.
 
-This is a little writeup where we try to answer the above questions. It will
-also go into some of the technicalities involved with CPS, and how this could
-fit in the Nim ecosystem.
+This short writeup attempts to answer the above questions and describes a few
+technicalities involved with CPS, and how this could fit in the Nim ecosystem.
 
-In this document I will use the term **CPS** for the programming style using
+NB: This document uses the term **CPS** for the programming style using
 continuations, and **Nim-CPS** when referring to the particular implementation
 that is currently under development.
 
 ## TL;DR
 
-(If you have only 1 minute to spare, read this section only and ignore the rest
-of this document)
+(If you have only 1 minute to spare, read this section)
 
-*Nim-CPS* is a small library that can do only one simple thing: It basically
-performs a transformation on Nim functions:
+*Nim-CPS* is a small library that does one and only one simple transformation on
+Nim functions. This transformation:
 
-- It cuts one big "linear" function into smaller functions.
-- It moves the local variables of the function out of the stack to a different
-  place.
+- Cuts one big "linear" function into smaller functions.
+- Moves local variables of the function out of the stack to a different place.
+- Cuts are made at control flow/jumps, eg: `if`, `return`, calls, etc.
 
 The end result of this transformation is a list of **continuations**, where a
 continuation is typically a Nim object with a function pointer, and a list of
-the variables that where originally on the stack. After this transformation,
-the stack is no longer needed, which allows for some interesting possibilities:
+the variables that where originally on the stack. After this transformation, the
+stack is no longer needed, which allows for some interesting possibilities:
 
-- The transformed function can be interrupted half way, and resumed at a later
-  time.  In the mean time one can run other functions (coroutines! iterators!)
-  or one can wait for I/O to become available (async I/O!)
+- Pre-transformed functions _can_ be interrupted part way at each cut point.
+- The transformed parts of a function _can_ be called in a different order,
+  including not calling them at all.
+- Some or all of the transformed parts _can_ be run in different threads.
 
-- The transformed parts of the functions can be called in a different order
-  then intended, allowing you to build custom flow control primitives (goto!
-  exceptions!) _without needing support from the language_.
+Note that _can_ was often used, this is where libraries come in to use the
+Nim-CPS transform in order to implement:
 
-- Parts of a function that are known to block (calculations, DNS lookups, etc)
-  could be moved to another thread while keeping the main program responsive.
-  (TODO What's this called)
+- Interrupting and resuming function execution part way, while running another
+  function's parts is the basis of `yield` (coroutines! iterators! generators!),
+  or one can wait for I/O to become available (async I/O!).
+
+- Varying the order of calling the transformed parts than originally intended
+  allows you to build custom flow control primitives (goto! exceptions!)
+  _without needing support from the language_.
+
+- Moving parts of a function that are known to block (calculations, DNS lookups,
+  etc) to another thread while keeping the main program responsive (background
+  processing!).
 
 - [TODO talk about Nim's bad threading support]
 
