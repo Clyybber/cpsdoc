@@ -61,6 +61,8 @@ First, CPS is nothing new; in the Lisp world people have been doing CPS since
 the '70s, and in some languages (mainly those of the functional-programming
 style) CPS is a common programming paradigm.
 
+## Control-flow on the Stack
+
 Computer programs written in *procedural* programming languages are typically
 composed of functions calling other functions, making up a kind of tree-shaped
 form.
@@ -82,6 +84,7 @@ proc main() =
   echo "entry"
   func1()
   func2()
+  echo "exit"
 
 main()
 ```
@@ -103,6 +106,8 @@ and shrinks; it must do so in order to keep track of variables the programmer
 defined and the functions the programmer called so that it can *resume*
 control-flow when those functions complete.
 
+## Stack Growth
+
 When a function *calls* another function, it will store the *return address* on
 the stack; when the *called* function is done, the program will continue the
 *calling* function from that return address.
@@ -119,6 +124,8 @@ resource. You might imagine that this is particularly problematic with
 recursive functions, and you have perhaps run into a *stack overflow* error in
 these cases.
 
+## Enter CPS
+
 A different approach to control-flow is called **CPS**. CPS is an acronym
 for "Continuation-Passing Style", which sounds a bit abstract if you're not
 knee-deep in computer science, but the concept is actually very simple and as
@@ -128,6 +135,8 @@ can trivially adopt in almost any program.
 Using CPS, when a function completes, it will never resume its caller using the
 return address on the stack; instead it will directly call another function as
 the last thing it does.
+
+## Simplifying Control-flow with CPS
 
 Let's rewrite our example in CPS.
 
@@ -146,6 +155,7 @@ proc func1() =
 proc main() =
   echo "entry"
   func1()
+  echo "exit"
 
 main()
 ```
@@ -165,18 +175,85 @@ Now let's see what our tree looks like.
                       [func3]
 ```
 
-Hmm, not very compelling so far. The problem is that even though there's
-nothing left to do at the end of our functions but to call another function,
-the language is still growing the stack and never shrinking it until the last
-function completes, at which point all the subsequent stack growth can be
-unwound.
+## There's Just One Problem
+
+This is silly! After leaving each of these functions, `main`, `func1`, `func2`,
+and even `func3`, we never return to the caller's function context, yet we
+still pay the penalty of having visited in the first place.
+
+However, when you think about it, the program is already simpler to follow and
+we've managed to constrain this problem of optimizing or eliminating stack
+growth to a single scenario: a function call at the tail of another function.
+
+## Tail-Call Optimization
+
+Indeed, `gcc` and `clang` may be able to recognize that control-flow need
+never revisit the calling function and thus unwind the stack before making
+the function call at the tail. This is appropriately-termed **Tail-Call
+Optimization** or **Tail-Call Elimination**.
+
+Unfortunately, this optimization is not guaranteed by Nim, and as a result, we
+need to address stack growth directly in Nim.
+
+## Enter the Trampoline
+
+What we really want is to run the first function, then run the next function,
+then run the next function, and so on until there are no more functions to run.
+
+To achieve this, we simply have each function in the chain tell the program
+where to go next.
+
+```nim
+proc done(): auto =
+  return done
+
+proc func3(): auto =
+  echo "three"
+  return done
+
+proc func2(): auto =
+  echo "two"
+  return func3
+
+proc func1(): auto =
+  echo "one"
+  return func2
+
+proc main() =
+  echo "entry"
+
+  # start with a continuing function
+  var fn = func1
+
+  # bounce on the trampoline until the continuation is done
+  while fn != done:
+    # run the current function and replace it
+    # with whatever the next function is
+    fn = fn()
+
+  echo "exit"
+
+main()
+```
+
+Now our stack tree looks like this:
+
+```
+ ----[main]     [main]     [main]     [main] ---> end
+          |     ^    |     ^    |     ^
+          v     |    v     |    v     |
+          [func1]    [func2]    [func3]
+```
+
+Perfect! We performed the same control-flow, more simply, and with no
+inefficient stack growth.
 
 ## A little history of Nim-CPS
 
 Somewhere in the summer of '20, a few people started to think about what an
 implementation of CPS could bring to Nim, and what this would look like. First
-inspiration for in implementation was suggested by Araq, who pointed to a paper
-describing a rudimentary CPS implementation for the C language.
+inspiration for in implementation was suggested by @Araq, who pointed to a
+paper describing a rudimentary CPS implementation for the C language.
 
 Using the algorithms in this paper as a guide, a first implementation of
 Nim-CPS was built using Nim macros, allowing CPS to be available as a library
