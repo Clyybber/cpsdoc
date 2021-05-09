@@ -270,7 +270,7 @@ proc spin() =
     echo "come back later"
     spin()
   else:
-    echo "okay"
+    echo "okay, it's time"
 
 proc main() =
   echo "entry"
@@ -280,9 +280,9 @@ proc main() =
 main()
 ```
 
-Now the program prints `come back later` until the epoch time is odd, at
-which point it prints `okay` and then completes, printing `exit`. This is a
-very elegant control-flow design, but there's a bug in this program because
+Now the program prints `come back later` until the epoch time is odd, at which
+point it prints `okay, it's time` and then completes, printing `exit`. This is
+a very elegant control-flow design, but there's a bug in this program because
 sometimes we spin so much that we exhaust the stack just by bookkeeping the
 entry and exit of the `spin` procedure.
 
@@ -292,7 +292,7 @@ Let's see how this is solved in CPS.
 import times
 
 proc okay(): auto =
-  echo "okay"
+  echo "okay, it's time"
   okay
 
 proc spin(): auto =
@@ -331,8 +331,8 @@ First, let's introduce some local state in our program.
 import times, strutils
 
 proc spin() =
-  var now = getTime().toUnix
-  if now mod 2 == 0:
+  var now = getTime()
+  if now.toUnix mod 2 == 0:
     echo "come back later"
     spin()
   else:
@@ -346,7 +346,7 @@ proc main() =
 main()
 ```
 
-Our CPS version of the _previous_ program does this `echo "okay"` in a separate
+Our CPS version of the _previous_ program does the `okay...` echo in a separate
 function, but that's going to be a problem here because that function doesn't
 have access to the `now` variable. We cannot supply it as an argument to the
 `okay` procedure because changing the signature of the procedure from that of
@@ -354,8 +354,8 @@ have access to the `now` variable. We cannot supply it as an argument to the
 
 We could change both signatures thusly:
 ```nim
-proc spin(now: int64)
-proc okay(now: int64)
+proc spin(now: Time)
+proc okay(now: Time)
 ```
 But this will clearly be burdensome as the complexity of our program grows.
 
@@ -372,15 +372,15 @@ import times, strutils
 
 type Continuation = ref object
   next: proc (c: Continuation): Continuation
-  now: int64
+  now: Time
 
 proc okay(c: Continuation): Continuation =
   echo "okay, it's $#" % [$c.now]
   return nil
 
 proc spin(c: Continuation): Continuation =
-  c.now = getTime().toUnix
-  if c.now mod 2 == 0:
+  c.now = getTime()
+  if c.now.toUnix mod 2 == 0:
     echo "come back later"
   else:
     c.next = okay
