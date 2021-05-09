@@ -347,7 +347,7 @@ have access to the `now` variable. We cannot supply it as an argument to the
 `okay` procedure because changing the signature of the procedure from that of
 `spin` will cause it to be unusable in our trampoline.
 
-We could change the signatures thusly:
+We could change both signatures thusly:
 ```nim
 proc spin(now: int64)
 proc okay(now: int64)
@@ -355,12 +355,12 @@ proc okay(now: int64)
 But this will clearly be burdensome as the complexity of our program grows.
 
 There is a more general solution: we can share variables of the functions
-throughout the CPS call chain; each procedure can receive the same context as
-input and mutate that environment before directing the trampoline to the next
+throughout the CPS call chain; each procedure can receive the same object as
+input and mutate that _environment_ before directing the trampoline to the next
 function in the chain.
 
-We start by storing the next function target for the trampoline, and then we
-add the `now` variable.
+We begin our `Continuation` object definition with the `next` function target
+for the trampoline, and then we add the `now` variable to the environment.
 
 ```nim
 import times, strutils
