@@ -262,7 +262,7 @@ only, without needing any support from the compiler or the language.
 
 ## What Nim-CPS can do for you, today
 
-[TODO take a consice exmaple like stash/iterator, show what goes in and what comes out]
+[TODO take a concise example like stash/iterator, show what goes in and what comes out]
 
 
 ## The future of Nim-CPS
