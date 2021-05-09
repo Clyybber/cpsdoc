@@ -216,11 +216,12 @@ What we really want is to run the first function, then run the next function,
 then run the next function, and so on until there are no more functions to run.
 
 To achieve this, we have each function in the chain tell the program where to
-go next.
+go next using a simple loop that executes each function until the chain is
+terminated.
 
 ```nim
-proc done(): auto =
-  return done
+proc terminator(): auto =
+  return terminator
 
 proc func3(): auto =
   echo "three"
@@ -237,7 +238,7 @@ proc func1(): auto =
 proc main() =
   echo "entry"
   var next = func1
-  while next != done:
+  while next != terminator:
     next = next()
   echo "exit"
 
