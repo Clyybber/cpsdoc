@@ -364,21 +364,21 @@ throughout the CPS call chain; each procedure can receive the same object as
 input and mutate that _environment_ before directing the trampoline to the next
 function in the chain.
 
-We begin our `Continuation` object definition with the `next` function target
-for the trampoline, and then we add the `now` variable to the environment.
+We begin our `OddTimer` object definition with the `next` function target for
+the trampoline, and then we add the `now` variable to the environment.
 
 ```nim
 import times, strutils
 
-type Continuation = ref object
-  next: proc (c: Continuation): Continuation
+type OddTimer = ref object
+  next: proc (c: OddTimer): OddTimer
   now: Time
 
-proc okay(c: Continuation): Continuation =
+proc okay(c: OddTimer): OddTimer =
   echo "okay, it's $#" % [$c.now]
   return nil
 
-proc spin(c: Continuation): Continuation =
+proc spin(c: OddTimer): OddTimer =
   c.now = getTime()
   if c.now.toUnix mod 2 == 0:
     echo "come back later"
@@ -388,7 +388,7 @@ proc spin(c: Continuation): Continuation =
 
 proc main() =
   echo "entry"
-  var c = Continuation(next: spin)
+  var c = OddTimer(next: spin)
   while c != nil:
     c = c.next(c)
   echo "exit"
