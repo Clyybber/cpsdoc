@@ -16,26 +16,30 @@ that is currently under development.
 
 (If you have only 1 minute to spare, read this section)
 
-*Nim-CPS* is a small library that does one and only one simple transformation on
-Nim functions. This transformation:
+*Nim-CPS* is a small metaprogramming library that offers a only a simple
+transformation for Nim functions. This transformation:
 
-- Cuts one big "linear" function into smaller functions. Cuts are made at control flow/jumps, eg: `if`, `return`, calls, etc.
-- Moves local variables of the function out of the stack to a different place.
+- Cuts a function into smaller functions. Cuts are made at points where control-flow changes, e.g. `if`, `return`, calls, etc.
+- Moves local variables of the function from the stack to the heap.
 
-The end result of this transformation is a list of **continuations**, where a
-continuation is typically a Nim object with a function pointer, and a list of
-the variables that where originally on the stack. After this transformation, the
-stack is no longer needed, which allows for some interesting possibilities:
+The end result of this transformation is a continuation type, which is
+typically a Nim object which contains a function pointer and any variables
+that where originally on the stack in the original function. In addition, a
+series of functions are generated which take this **continuation** as input and
+perform any continuation-free logic from the body of the original function.
 
-- Pre-transformed functions _can_ be interrupted part way at each cut point.
-- The transformed parts of a function _can_ be called in a different order,
-  including not calling them at all.
-- Some or all of the transformed parts _can_ be run in different threads.
+After this transformation, the stack is no longer needed, which allows for some
+interesting possibilities:
 
-Note that _can_ was often used, this is where other libraries come in to use the
-Nim-CPS transform in order to implement:
+- Pre-transformed functions _may_ be interrupted part-way at each cut point.
+- The transformed parts of a function _may_ be called in a different order,
+  or not called at all.
+- Some or all of the transformed parts _may_ be run in different threads.
 
-- Interrupting and resuming function execution part way, while running another
+Note that _may_ was often used, this is where other libraries come in to use
+Nthe im-CPS transform in order to implement:
+
+- Interrupting and resuming function execution part-way, while running another
   function's parts is the basis of `yield` (coroutines! iterators! generators!),
   or one can wait for I/O to become available (async I/O!).
 
@@ -47,7 +51,7 @@ Nim-CPS transform in order to implement:
   etc) to another thread while keeping the main program responsive (background
   processing!).
 
-- [TODO talk about Nim's bad threading support]
+- [TODO talk about Nim's threading support]
 
 *Nim-CPS is not*:
 
@@ -252,6 +256,70 @@ Now our stack tree looks like this:
 
 Perfect! We performed the same control-flow, more simply, and with no
 inefficient stack growth.
+
+## You Call That 'Simple'?
+
+Hang in there; it's going to get worse before it gets better.  😁
+
+Let's modify our original program to add some more complexity.
+
+```nim
+import times
+
+proc okay() =
+  echo "okay"
+
+proc spin() =
+  if getTime().toUnix mod 2 == 0:
+    echo "come back later"
+    spin()
+  else:
+    okay()
+
+proc main() =
+  echo "entry"
+  spin()
+  echo "exit"
+
+main()
+```
+
+Now the program prints `come back later` until the epoch time is odd, at
+which point it prints `okay` and then completes, printing `exit`. This is a
+very elegant control-flow design, but there's a bug in this program because
+sometimes we spin so much that we exhaust the stack just by bookkeeping the
+entry and exit of the `spin` procedure.
+
+Let's see how this is solved in CPS.
+
+```nim
+import times
+
+proc okay(): auto =
+  echo "okay"
+  okay
+
+proc spin(): auto =
+  if getTime().toUnix mod 2 == 0:
+    echo "come back later"
+    spin
+  else:
+    okay
+
+proc main() =
+  echo "entry"
+  var fn = spin
+  while fn != okay:
+    fn = fn()
+  echo "exit"
+
+main()
+```
+
+Actually, that wasn't so bad. In fact, it's almost the same size as the
+original version, but this one doesn't have the original's stack-overflow bug.
+
+# Nim-CPS
 
 ## A little history of Nim-CPS
 
