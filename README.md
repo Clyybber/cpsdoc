@@ -64,13 +64,7 @@ the Nim-CPS transform in order to implement:
 
 - [TODO What more is Nim-CPS not]
 
-
-
-# A little history of CPS
-
-First, CPS is nothing new; in the Lisp world people have been doing CPS since
-the '70s, and in some languages (mainly those of the functional-programming
-style) CPS is a common programming paradigm.
+# What Is This and Why Should I Care?
 
 ## Control-flow on the Stack
 
@@ -143,11 +137,17 @@ knee-deep in computer science, but the concept is actually very simple and as
 the name implies, it is merely a *style* of programming control-flow which you
 can trivially adopt in almost any program.
 
+## A little history of CPS
+
+First, CPS is nothing new; in the Lisp world people have been doing CPS since
+the '70s, and in some languages (mainly those of the functional-programming
+style) CPS is a common programming paradigm.
+
+## Simplifying Control-flow with CPS
+
 Using CPS, when a function completes, it will never resume its caller using the
 return address on the stack; instead it will directly call another function as
 the last thing it does.
-
-## Simplifying Control-flow with CPS
 
 Let's rewrite our example in CPS.
 
@@ -232,16 +232,9 @@ proc func1(): auto =
 
 proc main() =
   echo "entry"
-
-  # start with a continuing function
-  var fn = func1
-
-  # bounce on the trampoline until the continuation is done
-  while fn != done:
-    # run the current function and replace it
-    # with whatever the next function is
-    fn = fn()
-
+  var next = func1
+  while next != done:
+    next = next()
   echo "exit"
 
 main()
@@ -268,15 +261,12 @@ Let's modify our original program to add some more complexity.
 ```nim
 import times
 
-proc okay() =
-  echo "okay"
-
 proc spin() =
   if getTime().toUnix mod 2 == 0:
     echo "come back later"
     spin()
   else:
-    okay()
+    echo "okay"
 
 proc main() =
   echo "entry"
@@ -310,16 +300,97 @@ proc spin(): auto =
 
 proc main() =
   echo "entry"
-  var fn = spin
-  while fn != okay:
-    fn = fn()
+  var next = spin
+  while next != okay:
+    next = next()
   echo "exit"
 
 main()
 ```
 
-Actually, that wasn't so bad. In fact, it's almost the same size as the
-original version, but this one doesn't have the original's stack-overflow bug.
+Actually, that wasn't so bad. In fact, it's similar in size to the original
+version, but the version using CPS doesn't suffer the stack-overflow bug.
+
+Hopefully, you can start to see some advantages to this method of structuring
+control-flow, but perhaps you've also noticed a new issue, which brings us
+to...
+
+## Local Variables
+
+Remember when I said things would get worse before they get better? This is
+that. 😈  But trust me, if you can get through this little section, you're
+home free.
+
+First, let's introduce some local state in our program.
+
+```nim
+import times, strutils
+
+proc spin() =
+  var now = getTime().toUnix
+  if now mod 2 == 0:
+    echo "come back later"
+    spin()
+  else:
+    echo "okay, it's $#" % [$now]
+
+proc main() =
+  echo "entry"
+  spin()
+  echo "exit"
+
+main()
+```
+
+Our CPS version of the _previous_ program does this `echo "okay"` in a separate
+function, but that's going to be a problem here because that function doesn't
+have access to the `now` variable. We cannot simply supply it as an argument to
+the `okay` procedure because changing the signature of the procedure from that
+of `spin` will cause it to be unusable in our trampoline.
+
+We could simply change the signatures thusly:
+
+```nim
+proc spin(now: int64)
+proc okay(now: int64)
+```
+
+But there is a more general solution: we will simply share variables of the
+functions throughout the CPS call chain; every procedure will receive the same
+environmental context as input and mutate that environment before directing the
+trampoline to the next function in the chain.
+
+In some sense this is simpler, because the next function can be stored in the
+same environment.
+
+```nim
+import times, strutils
+
+type Continuation = ref object
+  next: proc (c: Continuation): Continuation
+  now: int64
+
+proc okay(c: Continuation): Continuation =
+  echo "okay, it's $#" % [$c.now]
+  return nil
+
+proc spin(c: Continuation): Continuation =
+  c.now = getTime().toUnix
+  if c.now mod 2 == 0:
+    echo "come back later"
+  else:
+    c.next = okay
+  return c
+
+proc main() =
+  echo "entry"
+  var c = Continuation(next: spin)
+  while c != nil:
+    c = c.next(c)
+  echo "exit"
+
+main()
+```
 
 # Nim-CPS
 
