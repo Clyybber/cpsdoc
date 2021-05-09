@@ -68,15 +68,21 @@ form.
 As an example of this control-flow, consider the following Nim program:
 
 ```nim
-proc func3() = discard
+proc func3() =
+  echo "three"
 
-proc func2() = func3()
+proc func2() =
+  echo "two"
+  func3()
 
-proc func1() = discard
+proc func1() =
+  echo "one"
 
 proc main() =
+  echo "entry"
   func1()
   func2()
+
 main()
 ```
 
@@ -87,9 +93,9 @@ This is a rendering of that program's control-flow to show the tree structure:
             |     ^        |                     ^
             v     |        v                     |
             [func1] - - -  [func2..] - - [..func2]
-                                   |     ^ 
-                                   v     | 
-                                   [func3] 
+                                   |     ^
+                                   v     |
+                                   [func3]
 ```
 
 As control-flow is introduced, the tree -- also known as a **stack** -- grows
@@ -101,36 +107,69 @@ When a function *calls* another function, it will store the *return address* on
 the stack; when the *called* function is done, the program will continue the
 *calling* function from that return address.
 
-This way of programming is nice and structured, but the consequence is that
-there is only "one way" your program can flow: it goes into functions, and only
-leaves them when they return.
+This way of programming is structured and easy to reason about, but the
+consequence is that there is only "one way" your program can flow: it goes into
+functions, and only leaves them when they return. When your function calls
+another function, the stack grows, consuming a limited memory resource that is
+often inaccessible and of little use to the new function context.
+
+If your program decides that it doesn't need some memory it consumed on the
+stack in a parent function context, there's no easy way to recover that
+resource. You might imagine that this is particularly problematic with
+recursive functions, and you have perhaps run into a *stack overflow* error in
+these cases.
 
 A different approach to control-flow is called **CPS**. CPS is an acronym
 for "Continuation-Passing Style", which sounds a bit abstract if you're not
-knee-deep in computer science. What happens is this:
+knee-deep in computer science, but the concept is actually very simple and as
+the name implies, it is merely a *style* of programming control-flow which you
+can trivially adopt in almost any program.
 
-When a function completes, it will never return back to the place where it came
-from; instead it will directly call another function as the last thing it does.
+Using CPS, when a function completes, it will never resume its caller using the
+return address on the stack; instead it will directly call another function as
+the last thing it does.
+
+Let's rewrite our example in CPS.
+
+```nim
+proc func3() =
+  echo "three"
+
+proc func2() =
+  echo "two"
+  func3()
+
+proc func1() =
+  echo "one"
+  func2()
+
+proc main() =
+  echo "entry"
+  func1()
+
+main()
+```
+
+Now let's see what our tree looks like.
 
 ```
- ----[main]   
-          |   
-          v    
-          [func1]
-                |   
-                v    
-                [func2]
-                      |   
-                      v    
+ ----[main]                             [main] ---> end
+          |                             ^
+          v                             |
+          [func1]                 [func1]
+                |                 ^
+                v                 |
+                [func2]     [func2]
+                      |     ^
+                      v     |
                       [func3]
-                            |   
-                            v    
-                            [func3] ---> end
-                 
 ```
 
-[TODO tell about CTO?]
-
+Hmm, not very compelling so far. The problem is that even though there's
+nothing left to do at the end of our functions but to call another function,
+the language is still growing the stack and never shrinking it until the last
+function completes, at which point all the subsequent stack growth can be
+unwound.
 
 ## A little history of Nim-CPS
 
