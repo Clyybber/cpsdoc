@@ -2,21 +2,21 @@
 # CPS - also known as Continuation-Passing Style - for Nim.
 
 People watching the Nim community likely have heard the term "CPS" over the
-last months. It seems that there is a lot of confusion about what CPS _is_, what
-it _is not_, what it can _do_ and what it can _not_ do.
+last few months. It seems that there is confusion about what CPS _is_, what it
+_is not_, what it can _do_ and what it can _not_ do.
 
 This is a little writeup where we try to answer the above questions. It will
 also go into some of the technicalities involved with CPS, and how this could
 fit in the Nim ecosystem.
 
-In this document I will use the term "CPS" for the programming style using
-continuations, and "Nim-CPS" when referring to the particular implementation
+In this document I will use the term **CPS** for the programming style using
+continuations, and **Nim-CPS** when referring to the particular implementation
 that is currently under development.
 
 ## TL;DR
 
-(If you have only 1 minutes to spare, read this section only and ignore the rest
-of this document)
+(If you have only 1 minutes to spare, read this section only and ignore the
+rest of this document)
 
 *Nim-CPS is* a small library that can do only one simple thing: It basically
 performs a transformation on Nim functions:
@@ -25,7 +25,7 @@ performs a transformation on Nim functions:
 - It moves the local variables of the function out of the stack to a different
   place.
 
-The end result of this transformation is a list of "continuations", where a
+The end result of this transformation is a list of **continuations**, where a
 continuation is typically a Nim object with a function pointer, and a list of
 the variables that where originally on the stack. After this transformation,
 the stack is no longer needed, which allows for some interesting possibilities:
@@ -38,7 +38,7 @@ the stack is no longer needed, which allows for some interesting possibilities:
   then intended, allowing you to build custom flow control primitives (goto!
   exceptions!) _without needing support from the language_.
 
-- Parts of a function that are know to block (calculations, DNS lookups, etc)
+- Parts of a function that are known to block (calculations, DNS lookups, etc)
   could be moved to another thread while keeping the main program responsive.
   (TODO What's this called)
 
@@ -46,9 +46,10 @@ the stack is no longer needed, which allows for some interesting possibilities:
 
 *Nim-CPS is not*:
 
-- an alternative implementation of `async`. As a matter of fact Nim-CPS does not
-  know anything about sockets, I/O, system calls, etc. That said, it is perfectly
-  possible to implement something like `async` using CPS as a building block
+- an alternative implementation of `async`. As a matter of fact, Nim-CPS does
+not know anything about sockets, I/O, system calls, etc. That said, it is
+perfectly possible to implement something like `async` using CPS as a building
+block
 
 - [TODO What more is Nim-CPS not]
 
@@ -56,15 +57,32 @@ the stack is no longer needed, which allows for some interesting possibilities:
 
 # A little history of CPS
 
-First things first: CPS is nothing new; in the Lisp-world people have been
-doing CPS since the 70's, and in some languages (mainly functional-programming
+First things first: CPS is nothing new; in the Lisp world people have been
+doing CPS since the '70s, and in some languages (mainly functional-programming
 style) CPS is a common programming paradigm.
 
-"Traditional" computer programs are typically composed of functions calling other
-functions, making up a kind of tree-shaped form. Every function will in the end
-return, until the program is done. When a function calls another function, it
-will store the return address on the stack; when the new function is done, the
-computer will continue the previous function from that address.
+"Traditional" computer programs are typically composed of functions calling
+other functions, making up a kind of tree-shaped form. Every function will in
+the end return, until the program is done. When a function *calls* another
+function, it will store the *return address* on the stack; when the *called*
+function is done, the program will continue the *calling* function from that
+return address.
+
+As an example of this control-flow, consider the following Nim program:
+
+```nim
+proc func3() = discard
+
+proc func2() = func3()
+
+proc func1() = discard
+
+proc main() =
+  func1()
+  func2()
+```
+
+This is a rendering of that program's control-flow to show the tree structure:
 
 ```
  ----[main..] - - [..main..] - - - - - - - - - - [..main]---> end
@@ -76,17 +94,15 @@ computer will continue the previous function from that address.
                                    [func3] 
 ```
 
-[TODO little drawing of program flow in a tree]
-
 This way of programming is nice and structured, but the consequence is that
-there is only "one way" your code can flow: it goes in functions, and only out
-when they return.
+there is only "one way" your code can flow: it goes into functions, and only
+out when they return.
 
-There are different ways of writing software, one of which is called CPS.  CPS
-is an acronym for "Continuation-passing style", which sounds a bit abstract if
-you're not knee deep into computer science. What happens is this:
+There are different ways of writing software, one of which is called **CPS**.
+CPS is an acronym for "Continuation-Passing Style", which sounds a bit abstract
+if you're not knee deep into computer science. What happens is this:
 
-When a function is done, it will never return back to the place where it came
+When a function completes, it will never return back to the place where it came
 from; instead it will directly call another function as the last thing it does.
 
 ```
