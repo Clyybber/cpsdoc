@@ -211,8 +211,8 @@ need to address stack growth directly in Nim.
 What we really want is to run the first function, then run the next function,
 then run the next function, and so on until there are no more functions to run.
 
-To achieve this, we simply have each function in the chain tell the program
-where to go next.
+To achieve this, we have each function in the chain tell the program where to
+go next.
 
 ```nim
 proc done(): auto =
@@ -249,8 +249,7 @@ Now our stack tree looks like this:
           [func1]    [func2]    [func3]
 ```
 
-Perfect! We performed the same control-flow, more simply, and with no
-inefficient stack growth.
+Perfect! We performed the same control-flow with no inefficient stack growth.
 
 ## You Call That 'Simple'?
 
@@ -344,24 +343,24 @@ main()
 
 Our CPS version of the _previous_ program does this `echo "okay"` in a separate
 function, but that's going to be a problem here because that function doesn't
-have access to the `now` variable. We cannot simply supply it as an argument to
-the `okay` procedure because changing the signature of the procedure from that
-of `spin` will cause it to be unusable in our trampoline.
+have access to the `now` variable. We cannot supply it as an argument to the
+`okay` procedure because changing the signature of the procedure from that of
+`spin` will cause it to be unusable in our trampoline.
 
-We could simply change the signatures thusly:
-
+We could change the signatures thusly:
 ```nim
 proc spin(now: int64)
 proc okay(now: int64)
 ```
+But this will clearly be burdensome as the complexity of our program grows.
 
-But there is a more general solution: we will simply share variables of the
-functions throughout the CPS call chain; every procedure will receive the same
-environmental context as input and mutate that environment before directing the
-trampoline to the next function in the chain.
+There is a more general solution: we can share variables of the functions
+throughout the CPS call chain; each procedure can receive the same context as
+input and mutate that environment before directing the trampoline to the next
+function in the chain.
 
-In some sense this is simpler, because the next function can be stored in the
-same environment.
+We start by storing the next function target for the trampoline, and then we
+add the `now` variable.
 
 ```nim
 import times, strutils
@@ -391,6 +390,9 @@ proc main() =
 
 main()
 ```
+
+You probably noticed that we're using a `ref object` to hold these values; this
+neatly moves the allocations with a longer lifetime from the stack to the heap.
 
 # Nim-CPS
 
