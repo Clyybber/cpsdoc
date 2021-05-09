@@ -131,11 +131,15 @@ these cases.
 
 ## Enter CPS
 
-A different approach to control-flow is called **CPS**. CPS is an acronym
-for "Continuation-Passing Style", which sounds a bit abstract if you're not
-knee-deep in computer science, but the concept is actually very simple and as
-the name implies, it is merely a *style* of programming control-flow which you
-can trivially adopt in almost any program.
+A different approach to control-flow is _**Continuation-Passing Style**_, or
+**CPS**. CPS sounds a bit abstract if you're not knee-deep in computer science,
+but the concept is actually very simple and as the name implies, it is merely a
+*style* of programming control-flow which you can trivially adopt in almost any
+program.
+
+This document will demonstrate both how to write or modify programs using
+CPS, and why you might want to do so in your own programs. We use Nim in the
+examples, but CPS is applicable to almost any language with functions.
 
 ## A little history of CPS
 
@@ -145,9 +149,9 @@ style) CPS is a common programming paradigm.
 
 ## Simplifying Control-flow with CPS
 
-Using CPS, when a function completes, it will never resume its caller using the
-return address on the stack; instead it will directly call another function as
-the last thing it does.
+Using CPS, a completed function will not return to its caller using the return
+address on the stack; instead it will directly call another function and
+execution will continue from there.
 
 Let's rewrite our example in CPS.
 
