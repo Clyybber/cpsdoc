@@ -66,6 +66,16 @@ return, until the program is done. When a function calls another function, it
 will store the return address on the stack; when the new function is done, the
 computer will continue the previous function from that address.
 
+```
+ ----[main..]   [..main..]                   [..main]---> end
+          |     ^        |                   ^
+          v     |        v                   |
+          [func1]        [func2..]   [..func2]
+                               |     ^ 
+                               v     | 
+                               [func3] 
+```
+
 [TODO little drawing of program flow in a tree]
 
 This way of programming is nice and structured, but the consequence is that
@@ -79,7 +89,22 @@ you're not knee deep into computer science. What happens is this:
 When a function is done, it will never return back to the place where it came
 from; instead it will directly call another function as the last thing it does.
 
-[TODO little drawing of program flow in CPS]
+```
+ ----[main]   
+          |   
+          v    
+          [func1]
+                |   
+                v    
+                [func2]
+                      |   
+                      v    
+                      [func3]
+                            |   
+                            v    
+                            [func3] ---> end
+                 
+```
 
 [TODO tell about CTO?]
 
