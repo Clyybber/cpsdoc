@@ -33,7 +33,7 @@ stack is no longer needed, which allows for some interesting possibilities:
   including not calling them at all.
 - Some or all of the transformed parts _can_ be run in different threads.
 
-Note that _can_ was often used, this is where libraries come in to use the
+Note that _can_ was often used, this is where other libraries come in to use the
 Nim-CPS transform in order to implement:
 
 - Interrupting and resuming function execution part way, while running another
