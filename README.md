@@ -15,10 +15,10 @@ that is currently under development.
 
 ## TL;DR
 
-(If you have only 1 minutes to spare, read this section only and ignore the
-rest of this document)
+(If you have only 1 minute to spare, read this section only and ignore the rest
+of this document)
 
-*Nim-CPS is* a small library that can do only one simple thing: It basically
+*Nim-CPS* is a small library that can do only one simple thing: It basically
 performs a transformation on Nim functions:
 
 - It cuts one big "linear" function into smaller functions.
@@ -57,16 +57,13 @@ block
 
 # A little history of CPS
 
-First things first: CPS is nothing new; in the Lisp world people have been
-doing CPS since the '70s, and in some languages (mainly functional-programming
+First, CPS is nothing new; in the Lisp world people have been doing CPS since
+the '70s, and in some languages (mainly those of the functional-programming
 style) CPS is a common programming paradigm.
 
-"Traditional" computer programs are typically composed of functions calling
-other functions, making up a kind of tree-shaped form. Every function will in
-the end return, until the program is done. When a function *calls* another
-function, it will store the *return address* on the stack; when the *called*
-function is done, the program will continue the *calling* function from that
-return address.
+Computer programs written in *procedural* programming languages are typically
+composed of functions calling other functions, making up a kind of tree-shaped
+form.
 
 As an example of this control-flow, consider the following Nim program:
 
@@ -80,6 +77,7 @@ proc func1() = discard
 proc main() =
   func1()
   func2()
+main()
 ```
 
 This is a rendering of that program's control-flow to show the tree structure:
@@ -94,13 +92,22 @@ This is a rendering of that program's control-flow to show the tree structure:
                                    [func3] 
 ```
 
-This way of programming is nice and structured, but the consequence is that
-there is only "one way" your code can flow: it goes into functions, and only
-out when they return.
+As control-flow is introduced, the tree -- also known as a **stack** -- grows
+and shrinks; it must do so in order to keep track of variables the programmer
+defined and the functions the programmer called so that it can *resume*
+control-flow when those functions complete.
 
-There are different ways of writing software, one of which is called **CPS**.
-CPS is an acronym for "Continuation-Passing Style", which sounds a bit abstract
-if you're not knee deep into computer science. What happens is this:
+When a function *calls* another function, it will store the *return address* on
+the stack; when the *called* function is done, the program will continue the
+*calling* function from that return address.
+
+This way of programming is nice and structured, but the consequence is that
+there is only "one way" your program can flow: it goes into functions, and only
+leaves them when they return.
+
+A different approach to control-flow is called **CPS**. CPS is an acronym
+for "Continuation-Passing Style", which sounds a bit abstract if you're not
+knee-deep in computer science. What happens is this:
 
 When a function completes, it will never return back to the place where it came
 from; instead it will directly call another function as the last thing it does.
