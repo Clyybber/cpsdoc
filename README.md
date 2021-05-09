@@ -19,9 +19,8 @@ that is currently under development.
 *Nim-CPS* is a small library that does one and only one simple transformation on
 Nim functions. This transformation:
 
-- Cuts one big "linear" function into smaller functions.
+- Cuts one big "linear" function into smaller functions. Cuts are made at control flow/jumps, eg: `if`, `return`, calls, etc.
 - Moves local variables of the function out of the stack to a different place.
-- Cuts are made at control flow/jumps, eg: `if`, `return`, calls, etc.
 
 The end result of this transformation is a list of **continuations**, where a
 continuation is typically a Nim object with a function pointer, and a list of
