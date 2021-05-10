@@ -220,8 +220,8 @@ go next using a simple loop that executes each function until the chain is
 terminated.
 
 ```nim
-proc terminator(): auto =
-  return terminator
+proc done(): auto =
+  return done
 
 proc func3(): auto =
   echo "three"
@@ -238,7 +238,7 @@ proc func1(): auto =
 proc main() =
   echo "entry"
   var next = func1
-  while next != terminator:
+  while next != done:
     next = next()
   echo "exit"
 
